@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, ShieldAlert, ListFilter, History, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ListFilter, History, Sun, Moon, BarChart2 } from 'lucide-react';
 
 export function Header({ activeTab, setActiveTab, isUnlocked, isDarkMode, onToggleTheme }) {
   return (
@@ -18,7 +18,7 @@ export function Header({ activeTab, setActiveTab, isUnlocked, isDarkMode, onTogg
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+        <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab('statements')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
@@ -29,6 +29,17 @@ export function Header({ activeTab, setActiveTab, isUnlocked, isDarkMode, onTogg
           >
             <ListFilter className="w-3.5 h-3.5" />
             Statements
+          </button>
+          <button
+            onClick={() => setActiveTab('summary')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              activeTab === 'summary'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            Summary
           </button>
           <button
             onClick={() => setActiveTab('activity')}

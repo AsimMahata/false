@@ -6,10 +6,14 @@ import {
   toggleStatementStatus,
   deleteStatement,
   getStatementHistory,
+  getStatementSummary,
 } from '../controllers/statementController.js';
 import { getActivityLogs } from '../controllers/activityLogController.js';
 
 export const router = express.Router();
+
+// Summary statistics endpoint (placed before :id param routes)
+router.get('/statements/summary', getStatementSummary);
 
 // Statement endpoints
 router.get('/statements', getStatementsByDate);

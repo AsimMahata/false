@@ -74,7 +74,7 @@ export async function createStatement(req, res) {
     const statement = new Statement({
       statement_id: statementId,
       date,
-      status: true, // Behavior 1: newly created statement has status = true by default
+      status: true,
       deleted: false,
       current_version: 'v1',
       content,
@@ -85,7 +85,6 @@ export async function createStatement(req, res) {
 
     await statement.save();
 
-    // Log ADD action: Logging Rules say "ADD -> statement_id only"
     const log = new ActivityLog({
       log_id: logId,
       statement_id: statementId,
@@ -123,7 +122,6 @@ export async function updateStatementContent(req, res) {
       return res.status(404).json({ error: 'Statement not found or has been deleted.' });
     }
 
-    // Determine next version identifier
     const currentVersionNum = parseInt(statement.current_version.replace(/^v/, ''), 10) || statement.versions.length;
     const nextVersionId = `v${currentVersionNum + 1}`;
     const now = new Date();
@@ -141,7 +139,6 @@ export async function updateStatementContent(req, res) {
 
     await statement.save();
 
-    // Log EDIT action: Logging Rules say "EDIT -> statement_id and new version identifier (v1, v2, v3...)"
     const log = new ActivityLog({
       log_id: `log_${uuidv4()}`,
       statement_id: statement.statement_id,
@@ -162,7 +159,6 @@ export async function updateStatementContent(req, res) {
 /**
  * PATCH /api/statements/:id/status
  * Toggle or update the boolean status.
- * Constraint: Does NOT create a new version when only the status changes.
  */
 export async function toggleStatementStatus(req, res) {
   try {
@@ -173,7 +169,6 @@ export async function toggleStatementStatus(req, res) {
       return res.status(404).json({ error: 'Statement not found or has been deleted.' });
     }
 
-    // Toggle or take explicitly provided boolean
     const newStatus = typeof req.body.status === 'boolean' ? req.body.status : !statement.status;
     const now = new Date();
 
@@ -182,7 +177,6 @@ export async function toggleStatementStatus(req, res) {
 
     await statement.save();
 
-    // Log CHANGE_STATUS action: Logging Rules say "CHANGE_STATUS -> statement_id and new Boolean status"
     const log = new ActivityLog({
       log_id: `log_${uuidv4()}`,
       statement_id: statement.statement_id,
@@ -219,7 +213,6 @@ export async function deleteStatement(req, res) {
 
     await statement.save();
 
-    // Log DELETE action: Logging Rules say "DELETE -> statement_id only"
     const log = new ActivityLog({
       log_id: `log_${uuidv4()}`,
       statement_id: statement.statement_id,
@@ -261,5 +254,107 @@ export async function getStatementHistory(req, res) {
   } catch (error) {
     console.error('Error fetching statement history:', error);
     res.status(500).json({ error: 'Failed to fetch statement history.' });
+  }
+}
+
+/**
+ * GET /api/statements/summary
+ * Aggregate statements date-wise, month-wise, year-wise, and all-time with True/False ratios.
+ */
+export async function getStatementSummary(req, res) {
+  try {
+    const activeStatements = await Statement.find({ deleted: false }, { date: 1, status: 1, created_at: 1 });
+
+    const dailyMap = {};
+    const monthlyMap = {};
+    const yearlyMap = {};
+
+    let totalAllTime = 0;
+    let trueAllTime = 0;
+    let falseAllTime = 0;
+
+    for (const stmt of activeStatements) {
+      const date = stmt.date; // YYYY-MM-DD
+      const month = date.slice(0, 7); // YYYY-MM
+      const year = date.slice(0, 4); // YYYY
+      const isTrue = Boolean(stmt.status);
+
+      totalAllTime++;
+      if (isTrue) trueAllTime++;
+      else falseAllTime++;
+
+      // Daily
+      if (!dailyMap[date]) {
+        dailyMap[date] = { total: 0, trueCount: 0, falseCount: 0 };
+      }
+      dailyMap[date].total++;
+      if (isTrue) dailyMap[date].trueCount++;
+      else dailyMap[date].falseCount++;
+
+      // Monthly
+      if (!monthlyMap[month]) {
+        monthlyMap[month] = { month, total: 0, trueCount: 0, falseCount: 0 };
+      }
+      monthlyMap[month].total++;
+      if (isTrue) monthlyMap[month].trueCount++;
+      else monthlyMap[month].falseCount++;
+
+      // Yearly
+      if (!yearlyMap[year]) {
+        yearlyMap[year] = { year, total: 0, trueCount: 0, falseCount: 0 };
+      }
+      yearlyMap[year].total++;
+      if (isTrue) yearlyMap[year].trueCount++;
+      else yearlyMap[year].falseCount++;
+    }
+
+    // Compute ratios
+    const computeRatio = (trueCount, falseCount) => {
+      const total = trueCount + falseCount;
+      if (total === 0) return { truePct: 0, falsePct: 0, ratioStr: 'N/A' };
+      const truePct = Math.round((trueCount / total) * 100);
+      const falsePct = 100 - truePct;
+      return { truePct, falsePct, ratioStr: `${trueCount}T / ${falseCount}F` };
+    };
+
+    // Format daily
+    const daily = {};
+    for (const [d, v] of Object.entries(dailyMap)) {
+      daily[d] = {
+        ...v,
+        ...computeRatio(v.trueCount, v.falseCount),
+      };
+    }
+
+    // Format monthly (sorted descending)
+    const monthly = Object.values(monthlyMap)
+      .map((m) => ({
+        ...m,
+        ...computeRatio(m.trueCount, m.falseCount),
+      }))
+      .sort((a, b) => b.month.localeCompare(a.month));
+
+    // Format yearly (sorted descending)
+    const yearly = Object.values(yearlyMap)
+      .map((y) => ({
+        ...y,
+        ...computeRatio(y.trueCount, y.falseCount),
+      }))
+      .sort((a, b) => b.year.localeCompare(a.year));
+
+    res.json({
+      allTime: {
+        total: totalAllTime,
+        trueCount: trueAllTime,
+        falseCount: falseAllTime,
+        ...computeRatio(trueAllTime, falseAllTime),
+      },
+      daily,
+      monthly,
+      yearly,
+    });
+  } catch (error) {
+    console.error('Error calculating statement summary:', error);
+    res.status(500).json({ error: 'Failed to calculate summary.' });
   }
 }

@@ -73,6 +73,15 @@ export async function fetchStatementHistory(id) {
   return res.json();
 }
 
+export async function fetchStatementSummary() {
+  const res = await fetch(`${API_BASE}/statements/summary`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch summary (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function fetchActivityLogs() {
   const res = await fetch(`${API_BASE}/activity-logs`);
   if (!res.ok) {

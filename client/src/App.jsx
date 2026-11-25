@@ -7,6 +7,7 @@ import { StatementForm } from './components/StatementForm';
 import { StatementList } from './components/StatementList';
 import { VersionHistoryModal } from './components/VersionHistoryModal';
 import { ActivityLogView } from './components/ActivityLogView';
+import { SummaryView } from './components/SummaryView';
 import { ConfirmModal } from './components/ConfirmModal';
 import {
   fetchStatements,
@@ -340,6 +341,16 @@ export function App() {
               />
             )}
           </div>
+        )}
+
+        {/* Summary Tab */}
+        {activeTab === 'summary' && (
+          <SummaryView
+            onSelectDate={(dateStr) => {
+              setSelectedDate(dateStr);
+              setActiveTab('statements');
+            }}
+          />
         )}
 
         {/* Activity Log Tab */}
