@@ -1,0 +1,29 @@
+{
+  "name": "false",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/src/server.js",
+    "build": "cd client && npm run build",
+    "dev": "node server/src/server.js",
+    "dev:client": "cd client && npm run dev",
+    "test": "node --test tests/crypto.test.js tests/api.test.js",
+    "test:crypto": "node --test tests/crypto.test.js",
+    "test:api": "node --test tests/api.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "mongoose": "^9.13.1",
+    "uuid": "^14.0.3"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.4.0"
+  }
+}
