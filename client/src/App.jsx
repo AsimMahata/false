@@ -7,6 +7,7 @@ import { StatementForm } from './components/StatementForm';
 import { StatementList } from './components/StatementList';
 import { VersionHistoryModal } from './components/VersionHistoryModal';
 import { ActivityLogView } from './components/ActivityLogView';
+import { ConfirmModal } from './components/ConfirmModal';
 import {
   fetchStatements,
   createStatement,
@@ -74,6 +75,9 @@ export function App() {
 
   // Modal for version history
   const [historyStatementId, setHistoryStatementId] = useState(null);
+
+  // Custom confirmation modal state
+  const [confirmModalConfig, setConfirmModalConfig] = useState(null);
 
   // Decrypt an array of statements with a password
   const decryptAllStatements = useCallback(async (stmtList, password) => {
@@ -206,16 +210,28 @@ export function App() {
     }
   };
 
-  // Toggle boolean status (True / False)
-  const handleToggleStatus = async (statementId, newStatus) => {
-    try {
-      const updatedStmt = await toggleStatementStatus(statementId, newStatus);
-      setStatements((prev) =>
-        prev.map((s) => (s.statement_id === statementId ? updatedStmt : s))
-      );
-    } catch (err) {
-      setApiError(err.message);
-    }
+  // Toggle boolean status (True / False) with custom modal confirmation
+  const handleToggleStatus = (statementId, newStatus) => {
+    const currentStatusStr = !newStatus ? 'TRUE' : 'FALSE';
+    const nextStatusStr = newStatus ? 'TRUE' : 'FALSE';
+
+    setConfirmModalConfig({
+      title: 'Change Statement Status',
+      message: `Are you sure you want to change this statement from ${currentStatusStr} to ${nextStatusStr}?`,
+      confirmText: `Change to ${nextStatusStr}`,
+      confirmVariant: newStatus ? 'primary' : 'danger',
+      onConfirm: async () => {
+        setConfirmModalConfig(null);
+        try {
+          const updatedStmt = await toggleStatementStatus(statementId, newStatus);
+          setStatements((prev) =>
+            prev.map((s) => (s.statement_id === statementId ? updatedStmt : s))
+          );
+        } catch (err) {
+          setApiError(err.message);
+        }
+      },
+    });
   };
 
   // Edit statement content (creates a new version)
@@ -241,21 +257,29 @@ export function App() {
     }
   };
 
-  // Soft delete statement
-  const handleDelete = async (statementId) => {
-    if (!window.confirm('Are you sure you want to delete this statement?')) return;
-
-    try {
-      await deleteStatement(statementId);
-      setStatements((prev) => prev.filter((s) => s.statement_id !== statementId));
-      setDecryptedMap((prev) => {
-        const copy = { ...prev };
-        delete copy[statementId];
-        return copy;
-      });
-    } catch (err) {
-      setApiError(err.message);
-    }
+  // Soft delete statement with custom modal confirmation
+  const handleDelete = (statementId) => {
+    setConfirmModalConfig({
+      title: 'Delete Statement',
+      message:
+        'Are you sure you want to delete this statement? This will soft-delete the statement and hide it from the active list while preserving audit history.',
+      confirmText: 'Delete Statement',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        setConfirmModalConfig(null);
+        try {
+          await deleteStatement(statementId);
+          setStatements((prev) => prev.filter((s) => s.statement_id !== statementId));
+          setDecryptedMap((prev) => {
+            const copy = { ...prev };
+            delete copy[statementId];
+            return copy;
+          });
+        } catch (err) {
+          setApiError(err.message);
+        }
+      },
+    });
   };
 
   return (
@@ -328,6 +352,19 @@ export function App() {
           statementId={historyStatementId}
           masterPassword={masterPassword}
           onClose={() => setHistoryStatementId(null)}
+        />
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmModalConfig && (
+        <ConfirmModal
+          isOpen={Boolean(confirmModalConfig)}
+          title={confirmModalConfig.title}
+          message={confirmModalConfig.message}
+          confirmText={confirmModalConfig.confirmText}
+          confirmVariant={confirmModalConfig.confirmVariant}
+          onConfirm={confirmModalConfig.onConfirm}
+          onCancel={() => setConfirmModalConfig(null)}
         />
       )}
 

@@ -55,18 +55,6 @@ export function StatementItem({
     });
   };
 
-  const handleToggleClick = () => {
-    const currentStatusStr = statement.status ? 'TRUE' : 'FALSE';
-    const nextStatusStr = !statement.status ? 'TRUE' : 'FALSE';
-    if (
-      window.confirm(
-        `Are you sure you want to change status from ${currentStatusStr} to ${nextStatusStr}?`
-      )
-    ) {
-      onToggleStatus(statement.statement_id, !statement.status);
-    }
-  };
-
   return (
     <div
       className={`rounded-xl border transition-all p-4 ${
@@ -80,7 +68,7 @@ export function StatementItem({
         <div className="flex items-center justify-between gap-2">
           {/* Status Badge (Green for TRUE, Red for FALSE) */}
           <button
-            onClick={handleToggleClick}
+            onClick={() => onToggleStatus(statement.statement_id, !statement.status)}
             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
               isTrue
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
