@@ -7,13 +7,13 @@ export function Header({ activeTab, setActiveTab, isUnlocked, isDarkMode, onTogg
       <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gray-900 dark:bg-emerald-500 flex items-center justify-center text-white dark:text-gray-950 font-bold text-sm tracking-tighter">
-            T/F
+            f
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
-              Statement Tracker
+            <h1 className="text-xl font-black text-gray-900 dark:text-white leading-tight tracking-tight lowercase">
+              false
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Date-wise Boolean Statement Management</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">a statement tracker</p>
           </div>
         </div>
 

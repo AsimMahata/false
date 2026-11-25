@@ -1,6 +1,6 @@
-# Date-Wise Statement Tracker
+# false
 
-A modern, clean, zero-knowledge Boolean (True/False) statement tracker organized date-wise. Built with a React + Vite frontend, an Express + MongoDB backend (deployable directly to Vercel as serverless functions), and client-side encryption adhering to Universal Encryption Convention Version 1 (AES-256-GCM, PBKDF2-HMAC-SHA256).
+**false** is a clean, minimal, zero-knowledge Boolean (True/False) statement tracker organized date-wise. Built with a React + Vite frontend, an Express + MongoDB backend (deployable directly to Vercel as serverless functions), and client-side encryption adhering to Universal Encryption Convention Version 1 (AES-256-GCM, PBKDF2-HMAC-SHA256).
 
 ---
 

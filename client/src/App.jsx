@@ -381,7 +381,7 @@ export function App() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
-        Date-Wise Boolean Statement Tracker • AES-256-GCM Client-Side Encrypted
+        <span className="font-bold text-gray-700 dark:text-gray-300">false</span> — a statement tracker • AES-256-GCM Client-Side Encrypted
       </footer>
 
       {/* Vercel Web Analytics */}

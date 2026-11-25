@@ -42,7 +42,7 @@ export { app };
 if (process.env.NODE_ENV !== 'test') {
   app.listen(config.port, () => {
     console.log(`\n==================================================`);
-    console.log(`  Date-Wise Statement Tracker is running!`);
+    console.log(`  false — a statement tracker is running!`);
     console.log(`  Local URL: http://localhost:${config.port}`);
     console.log(`==================================================\n`);
   });
