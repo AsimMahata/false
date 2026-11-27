@@ -10,6 +10,7 @@ import {
   BookOpen,
   Menu,
 } from 'lucide-react';
+import { useUncommittedDrafts } from '../utils/diaryDraftStorage';
 
 export function Header({
   activePage = 'statement', // 'statement' | 'diary'
@@ -21,6 +22,7 @@ export function Header({
   onToggleTheme,
   onToggleMobileSidebar,
 }) {
+  const { count: uncommittedCount } = useUncommittedDrafts();
   return (
     <header className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 shadow-xs transition-colors">
       <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
@@ -85,6 +87,11 @@ export function Header({
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span className="font-caveat text-sm font-bold">Diary</span>
+            {uncommittedCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                {uncommittedCount}
+              </span>
+            )}
           </button>
         </div>
 

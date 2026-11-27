@@ -15,6 +15,7 @@ import {
   Unlock,
   Layers,
 } from 'lucide-react';
+import { useUncommittedDrafts } from '../utils/diaryDraftStorage';
 
 export function Sidebar({
   activePage = 'statement', // 'statement' | 'diary'
@@ -29,6 +30,7 @@ export function Sidebar({
   isCollapsed,
   onToggleCollapse,
 }) {
+  const { count: uncommittedCount } = useUncommittedDrafts();
   return (
     <>
       {/* Mobile Backdrop */}
@@ -171,12 +173,24 @@ export function Sidebar({
                 }`}
                 title="Diary ('Dairy')"
               >
-                <BookOpen className="w-4 h-4 shrink-0" />
+                <div className="relative shrink-0">
+                  <BookOpen className="w-4 h-4" />
+                  {uncommittedCount > 0 && isCollapsed && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  )}
+                </div>
                 {!isCollapsed && (
                   <div className="flex-1 text-left flex items-center justify-between">
-                    <span className="font-caveat text-sm font-bold tracking-wide">
-                      Diary ("Dairy")
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-caveat text-sm font-bold tracking-wide">
+                        Diary ("Dairy")
+                      </span>
+                      {uncommittedCount > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                          {uncommittedCount}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] px-1.5 py-0.2 rounded font-mono opacity-80">
                       /dairy
                     </span>

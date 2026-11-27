@@ -22,9 +22,13 @@ Built with a React 19 + Vite frontend, Express + MongoDB backend (deployable dir
   - Media & Links: `[img]https://...[/img]`, `[url=https://...]link[/url]`
   - Colors & Sizing: `[color=#ef4444]red[/color]`, `[size=120%]larger text[/size]`
   - Structure & Code: `[list][*]item 1[*]item 2[/list]`, `[code]monospace code[/code]`
+- **Real-Time Local Storage Drafts:** Whatever you type (title, mood, content) is instantly auto-saved to your browser's `localStorage` as an uncommitted draft.
+- **Git-Style Explicit Commits (v1, v2, ...):** Content is **only sent to the server after you commit**. Each commit creates an immutable version (`v1`, `v2`, etc.) with fresh AES-256-GCM encryption, mirroring the statement tracker versioning model.
+- **Uncommitted Pages Manager:** A dedicated slide-over / modal listing all uncommitted local pages across any date with options to jump directly to any page, commit individually to the server, or discard local changes to revert to the server state.
+- **Visual Draft Indicators:** Real-time auto-save indicator while typing, uncommitted page badge counts on the top navigation bar and sidebar rail, and draft preview notices.
 - **Live Split-Preview:** Side-by-side writing and real-time BBCode rendering on authentic notebook paper.
 - **Mood Tracker:** Select daily feelings (☀️ Grateful, ☕ Calm, 🌙 Peaceful, 🌧️ Reflective, 🚀 Productive, 💭 Thoughtful).
-- **Diary Version History:** Every edit creates an immutable version (`v1`, `v2`, etc.) with timestamps, decryptable in the history modal.
+- **Diary Version History:** Every committed edit preserves immutable historical versions (`v1`, `v2`, etc.) with timestamps, decryptable in the version history modal.
 
 ### 📝 Statements & Analytics
 - **Date-Wise Organization:** Quick navigation (Previous Day, Next Day, Today) with native date picker.

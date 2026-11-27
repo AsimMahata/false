@@ -16,10 +16,13 @@ import {
   Maximize2,
   FileText,
   AlertCircle,
+  AlertTriangle,
+  UploadCloud,
 } from 'lucide-react';
 import { BBCodeRenderer } from './BBCodeRenderer';
 import { DiaryEntryForm } from './DiaryEntryForm';
 import { DiaryVersionHistoryModal } from './DiaryVersionHistoryModal';
+import { UncommittedDraftsModal } from './UncommittedDraftsModal';
 import {
   fetchDiaryEntry,
   createDiaryEntry,
@@ -27,8 +30,31 @@ import {
   deleteDiaryEntry,
 } from '../../api';
 import { encryptStatement, decryptStatement } from '../../crypto/statementCrypto';
+import {
+  useUncommittedDrafts,
+  getUncommittedDraft,
+  deleteUncommittedDraft,
+  clearAllUncommittedDrafts,
+} from '../../utils/diaryDraftStorage';
 
 const FONT_SIZE_STORAGE_KEY = 'false_diary_font_size';
+
+// Format date helper exportable
+export const formatDateFriendly = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    return dateObj.toLocaleDateString(undefined, {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+};
 
 export function DiaryView({
   selectedDate,
@@ -50,15 +76,20 @@ export function DiaryView({
     }
   });
 
-  // Diary Entry State for selectedDate
+  // Diary Entry State for selectedDate from server
   const [entry, setEntry] = useState(null);
   const [decryptedData, setDecryptedData] = useState(null); // { title, mood, body }
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState(null);
 
-  // Version History Modal
+  // Version History Modal & Uncommitted Drafts Modal
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showUncommittedModal, setShowUncommittedModal] = useState(false);
+
+  // Uncommitted drafts hook
+  const { draftList, count: uncommittedCount, getDraft } = useUncommittedDrafts();
+  const currentDraft = getDraft(selectedDate);
 
   // Save font size preference
   const handleSetFontSize = (sz) => {
@@ -74,27 +105,18 @@ export function DiaryView({
     return 'diary-handwriting-normal';
   };
 
-  // Format date helper
-  const formatDateFriendly = (dateStr) => {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    return dateObj.toLocaleDateString(undefined, {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   const formatDateTime = (isoString) => {
     if (!isoString) return '';
-    return new Date(isoString).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    try {
+      return new Date(isoString).toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
   };
 
   // Day navigation helpers
@@ -191,15 +213,16 @@ export function DiaryView({
     loadEntry(selectedDate, masterPassword);
   }, [selectedDate, masterPassword, loadEntry]);
 
-  // When date changes, reset view mode to read if an entry exists, or keep current
+  // When date changes, reset view mode to read if an entry or draft exists
   useEffect(() => {
     setViewMode('read');
   }, [selectedDate]);
 
-  // Handle Save
-  const handleSaveEntry = async (formData) => {
+  // Handle Commit (Encrypt with AES-256 and POST/PUT to server)
+  const handleCommitEntry = async (formData) => {
     if (!masterPassword || !isUnlocked) {
-      setApiError('Please unlock with master password before saving.');
+      setApiError('Please unlock with master password before committing.');
+      if (onPromptUnlock) onPromptUnlock();
       return;
     }
 
@@ -219,12 +242,15 @@ export function DiaryView({
 
       let saved;
       if (entry && entry.entry_id) {
-        // Update existing entry
+        // Update existing entry (creates v2, v3, etc.)
         saved = await updateDiaryEntry(entry.entry_id, envelope);
       } else {
-        // Create new entry for date
+        // Create new entry for date (creates v1)
         saved = await createDiaryEntry(selectedDate, envelope);
       }
+
+      // Clear local uncommitted draft
+      deleteUncommittedDraft(selectedDate);
 
       setEntry(saved);
       setDecryptedData({
@@ -241,13 +267,53 @@ export function DiaryView({
     }
   };
 
-  // Handle Delete
+  // Commit arbitrary draft from the Uncommitted Modal
+  const handleCommitDraftFromModal = async (draft) => {
+    if (!masterPassword || !isUnlocked) {
+      if (onPromptUnlock) onPromptUnlock();
+      throw new Error('Please unlock with master password first.');
+    }
+
+    const rawPayload = JSON.stringify({
+      title: draft.title,
+      mood: draft.mood,
+      body: draft.body,
+    });
+
+    const envelope = await encryptStatement(rawPayload, masterPassword);
+
+    if (draft.entryId) {
+      await updateDiaryEntry(draft.entryId, envelope);
+    } else {
+      await createDiaryEntry(draft.date, envelope);
+    }
+
+    deleteUncommittedDraft(draft.date);
+
+    if (draft.date === selectedDate) {
+      await loadEntry(selectedDate, masterPassword);
+    }
+  };
+
+  // Discard draft for current date
+  const handleDiscardCurrentDraft = () => {
+    if (
+      window.confirm(
+        `Discard uncommitted draft for ${formatDateFriendly(selectedDate)}?`
+      )
+    ) {
+      deleteUncommittedDraft(selectedDate);
+    }
+  };
+
+  // Handle Server Entry Delete
   const handleDeleteEntry = () => {
     if (!entry) return;
 
     const action = async () => {
       try {
         await deleteDiaryEntry(entry.entry_id);
+        deleteUncommittedDraft(selectedDate);
         setEntry(null);
         setDecryptedData(null);
         setViewMode('read');
@@ -259,7 +325,9 @@ export function DiaryView({
     if (onDeleteConfirm) {
       onDeleteConfirm({
         title: 'Delete Diary Entry',
-        message: `Are you sure you want to delete the diary entry for ${formatDateFriendly(selectedDate)}? This will move it to archive while preserving audit history.`,
+        message: `Are you sure you want to delete the diary entry for ${formatDateFriendly(
+          selectedDate
+        )}? This will move it to archive while preserving audit history.`,
         confirmText: 'Delete Diary Entry',
         confirmVariant: 'danger',
         onConfirm: action,
@@ -270,6 +338,16 @@ export function DiaryView({
       }
     }
   };
+
+  // Display content in read mode: prioritize uncommitted draft if one exists, otherwise server decrypted data
+  const activeDisplayData = currentDraft
+    ? {
+        title: currentDraft.title,
+        mood: currentDraft.mood,
+        body: currentDraft.body,
+        isDraft: true,
+      }
+    : decryptedData;
 
   return (
     <div className="space-y-6">
@@ -296,16 +374,48 @@ export function DiaryView({
                     {entry.current_version || 'v1'}
                   </span>
                 )}
+                {currentDraft && (
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse">
+                    Uncommitted Draft
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
                 {selectedDate}
-                {entry?.updated_at && ` • Last saved ${formatDateTime(entry.updated_at)}`}
+                {entry?.updated_at &&
+                  ` • Last committed ${formatDateTime(entry.updated_at)}`}
               </p>
             </div>
           </div>
 
-          {/* Controls: Date navigation & View tools */}
+          {/* Controls: Date navigation & Uncommitted Pages Button & View tools */}
           <div className="flex items-center gap-2 flex-wrap self-stretch md:self-auto justify-between md:justify-end">
+            {/* Uncommitted Pages Indicator Button */}
+            <button
+              type="button"
+              onClick={() => setShowUncommittedModal(true)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                uncommittedCount > 0
+                  ? 'bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 shadow-2xs'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="View all uncommitted local pages"
+            >
+              <AlertTriangle
+                className={`w-3.5 h-3.5 ${
+                  uncommittedCount > 0
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-gray-400'
+                }`}
+              />
+              <span>Uncommitted</span>
+              {uncommittedCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                  {uncommittedCount}
+                </span>
+              )}
+            </button>
+
             {/* Prev / Today / Next Date Navigation */}
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
               <button
@@ -394,6 +504,60 @@ export function DiaryView({
         </div>
       )}
 
+      {/* Uncommitted Local Draft Notice Banner for Currently Selected Date */}
+      {currentDraft && viewMode === 'read' && (
+        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-950 dark:text-amber-100">
+                  Uncommitted Local Draft Active
+                </span>
+                <span className="text-[11px] font-mono text-amber-700 dark:text-amber-400">
+                  • Stored locally on this browser
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                You are previewing local changes. Commit them to encrypt and push to server, or discard to revert.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={handleDiscardCurrentDraft}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-100/50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Discard</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode('write')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleCommitEntry(currentDraft)}
+              disabled={isSubmitting}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>{isSubmitting ? 'Committing...' : 'Commit to Server'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Journal View Body */}
       {!isUnlocked ? (
         /* Locked Journal Cover */
@@ -408,7 +572,7 @@ export function DiaryView({
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-sans">
               Your diary entries are end-to-end encrypted with zero-knowledge AES-256-GCM.
-              Unlock with your master password to read and write your diary.
+              Unlock with your master password to read and commit your journal.
             </p>
           </div>
 
@@ -434,12 +598,14 @@ export function DiaryView({
       ) : viewMode === 'write' ? (
         /* Write / Edit Mode Form */
         <DiaryEntryForm
-          initialData={decryptedData || {}}
-          onSave={handleSaveEntry}
-          onCancel={entry ? () => setViewMode('read') : null}
+          initialData={currentDraft || decryptedData || {}}
+          onCommit={handleCommitEntry}
+          onCancel={() => setViewMode('read')}
           isSubmitting={isSubmitting}
           date={selectedDate}
           fontSizeClass={getFontSizeClass()}
+          entryId={entry?.entry_id || currentDraft?.entryId || null}
+          currentVersion={entry?.current_version || currentDraft?.baseVersion || 'v1'}
         />
       ) : (
         /* Read Mode (Authentic Lined Notebook Paper View) */
@@ -447,42 +613,51 @@ export function DiaryView({
           {/* Action Toolbar (Edit, Version History, Delete, Switch to Write) */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              {decryptedData?.mood && (
+              {activeDisplayData?.mood && (
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700 shadow-2xs">
-                  Mood: {decryptedData.mood}
+                  Mood: {activeDisplayData.mood}
+                </span>
+              )}
+              {activeDisplayData?.isDraft && (
+                <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono bg-amber-500 text-white font-bold">
+                  LOCAL DRAFT
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-2">
-              {entry ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowHistoryModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
-                  >
-                    <History className="w-3.5 h-3.5" />
-                    <span>Revisions ({entry.versions?.length || 1})</span>
-                  </button>
+              {entry && (
+                <button
+                  type="button"
+                  onClick={() => setShowHistoryModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Revisions ({entry.versions?.length || 1})</span>
+                </button>
+              )}
 
+              {entry || currentDraft ? (
+                <>
                   <button
                     type="button"
                     onClick={() => setViewMode('write')}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit Entry</span>
+                    <span>{currentDraft ? 'Continue Writing Draft' : 'Edit Entry'}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleDeleteEntry}
-                    className="p-1.5 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                    title="Delete Entry"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {entry && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteEntry}
+                      className="p-1.5 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                      title="Delete Entry from Server"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </>
               ) : (
                 <button
@@ -499,22 +674,20 @@ export function DiaryView({
 
           {/* Authentic Notebook Paper Page */}
           <div className="rounded-3xl border border-amber-300/80 dark:border-amber-900/40 diary-notebook-shadow diary-paper min-h-[500px] p-6 sm:p-10 pl-16 sm:pl-20 relative overflow-hidden transition-all">
-            {/* Notebook Margin Line is handled via .diary-paper background */}
-
-            {decryptedData ? (
+            {activeDisplayData ? (
               <div className="space-y-4">
                 {/* Journal Entry Title */}
-                {decryptedData.title && (
+                {activeDisplayData.title && (
                   <div className="border-b border-amber-200/80 dark:border-amber-900/40 pb-2 mb-4">
                     <h1 className="text-2xl sm:text-3xl font-bold font-caveat text-amber-950 dark:text-amber-100 tracking-wide">
-                      {decryptedData.title}
+                      {activeDisplayData.title}
                     </h1>
                   </div>
                 )}
 
                 {/* Rendered BBCode Body */}
                 <div className={getFontSizeClass()}>
-                  <BBCodeRenderer text={decryptedData.body} />
+                  <BBCodeRenderer text={activeDisplayData.body} />
                 </div>
               </div>
             ) : (
@@ -529,6 +702,7 @@ export function DiaryView({
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-sans max-w-sm mx-auto">
                     No diary entry has been written for {formatDateFriendly(selectedDate)} yet.
+                    Whatever you type will be saved locally until committed!
                   </p>
                 </div>
                 <div>
@@ -556,6 +730,19 @@ export function DiaryView({
           fontSizeClass={getFontSizeClass()}
         />
       )}
+
+      {/* Uncommitted Drafts Modal */}
+      <UncommittedDraftsModal
+        isOpen={showUncommittedModal}
+        onClose={() => setShowUncommittedModal(false)}
+        draftList={draftList}
+        onSelectDate={(dt) => setSelectedDate(dt)}
+        onCommitDraft={handleCommitDraftFromModal}
+        onDiscardDraft={(dt) => deleteUncommittedDraft(dt)}
+        onDiscardAll={() => clearAllUncommittedDrafts()}
+        isUnlocked={isUnlocked}
+        onPromptUnlock={onPromptUnlock}
+      />
     </div>
   );
 }
