@@ -161,13 +161,13 @@ export function DiaryVersionHistoryModal({
                                 {dec.error}
                               </div>
                             ) : (
-                              <div className="p-4 rounded-xl diary-paper border border-amber-200/60 dark:border-amber-900/30 overflow-hidden">
+                              <div className="p-4 rounded-xl diary-paper text-[#2c2724] border border-amber-200/80 overflow-hidden">
                                 {dec.title && (
-                                  <h4 className="font-caveat font-bold text-lg text-amber-950 dark:text-amber-100 mb-2">
+                                  <h4 className="font-caveat font-bold text-lg text-amber-950 mb-2">
                                     {dec.title}
                                   </h4>
                                 )}
-                                <div className={fontSizeClass}>
+                                <div className={`${fontSizeClass} text-[#2c2724]`}>
                                   <BBCodeRenderer text={dec.body} />
                                 </div>
                               </div>

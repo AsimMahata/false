@@ -672,35 +672,35 @@ export function DiaryView({
             </div>
           </div>
 
-          {/* Authentic Notebook Paper Page */}
-          <div className="rounded-3xl border border-amber-300/80 dark:border-amber-900/40 diary-notebook-shadow diary-paper min-h-[500px] p-6 sm:p-10 pl-16 sm:pl-20 relative overflow-hidden transition-all">
+          {/* Authentic Notebook Paper Page (Identical warm paper in BOTH light & dark modes) */}
+          <div className="rounded-3xl border border-amber-300/80 dark:border-amber-700/60 diary-notebook-shadow diary-paper min-h-[500px] p-6 sm:p-10 pl-16 sm:pl-20 relative overflow-hidden transition-all text-[#2c2724]">
             {activeDisplayData ? (
-              <div className="space-y-4">
+              <div className="space-y-4 text-[#2c2724]">
                 {/* Journal Entry Title */}
                 {activeDisplayData.title && (
-                  <div className="border-b border-amber-200/80 dark:border-amber-900/40 pb-2 mb-4">
-                    <h1 className="text-2xl sm:text-3xl font-bold font-caveat text-amber-950 dark:text-amber-100 tracking-wide">
+                  <div className="border-b border-amber-200/80 pb-2 mb-4">
+                    <h1 className="text-2xl sm:text-3xl font-bold font-caveat text-amber-950 tracking-wide">
                       {activeDisplayData.title}
                     </h1>
                   </div>
                 )}
 
                 {/* Rendered BBCode Body */}
-                <div className={getFontSizeClass()}>
+                <div className={`${getFontSizeClass()} text-[#2c2724]`}>
                   <BBCodeRenderer text={activeDisplayData.body} />
                 </div>
               </div>
             ) : (
               /* Empty Journal State */
-              <div className="py-20 text-center space-y-4">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100/60 dark:bg-amber-950/40 flex items-center justify-center text-amber-700 dark:text-amber-300">
+              <div className="py-20 text-center space-y-4 text-[#2c2724]">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100/60 flex items-center justify-center text-amber-700">
                   <BookOpen className="w-7 h-7" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-xl font-bold font-caveat text-amber-900 dark:text-amber-200">
+                  <h3 className="text-xl font-bold font-caveat text-amber-950">
                     The page is blank.
                   </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-sans max-w-sm mx-auto">
+                  <p className="text-xs text-amber-900/70 font-sans max-w-sm mx-auto">
                     No diary entry has been written for {formatDateFriendly(selectedDate)} yet.
                     Whatever you type will be saved locally until committed!
                   </p>

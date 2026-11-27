@@ -26,45 +26,28 @@
   font-family: 'Patrick Hand', 'Caveat', cursive, sans-serif;
 }
 
-/* Authentic Lined Notebook Paper Styles */
-.diary-paper {
-  background-color: #fdfbf7;
+/* Authentic Lined Notebook Paper Styles (consistent physical paper aesthetic in BOTH themes) */
+.diary-paper,
+.dark .diary-paper,
+.diary-paper-dark {
+  background-color: #fdfbf7 !important;
   background-image:
     /* Soft red left vertical margin line */
     linear-gradient(to right, transparent 0, transparent 3.75rem, rgba(239, 68, 68, 0.25) 3.75rem, rgba(239, 68, 68, 0.25) 3.85rem, transparent 3.85rem),
     /* Subtle light blue horizontal ruled lines (36px spacing) */
-    repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(186, 215, 245, 0.45) 35px, rgba(186, 215, 245, 0.45) 36px);
+    repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(186, 215, 245, 0.45) 35px, rgba(186, 215, 245, 0.45) 36px) !important;
   background-attachment: local;
-  color: #2c2724;
-}
-
-.dark .diary-paper,
-.diary-paper-dark {
-  background-color: #1c1b18;
-  background-image:
-    /* Warm golden/sepia left margin line */
-    linear-gradient(to right, transparent 0, transparent 3.75rem, rgba(217, 119, 6, 0.3) 3.75rem, rgba(217, 119, 6, 0.3) 3.85rem, transparent 3.85rem),
-    /* Subtle warm sepia horizontal ruled lines (36px spacing) */
-    repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(245, 158, 11, 0.08) 35px, rgba(245, 158, 11, 0.08) 36px);
-  background-attachment: local;
-  color: #ede5da;
+  color: #2c2724 !important;
 }
 
 /* Ruled lines for plain text / preview areas without left margin line */
-.diary-paper-plain {
-  background-color: #fdfbf7;
-  background-image:
-    repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(186, 215, 245, 0.35) 35px, rgba(186, 215, 245, 0.35) 36px);
-  background-attachment: local;
-  color: #2c2724;
-}
-
+.diary-paper-plain,
 .dark .diary-paper-plain {
-  background-color: #1c1b18;
+  background-color: #fdfbf7 !important;
   background-image:
-    repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(245, 158, 11, 0.07) 35px, rgba(245, 158, 11, 0.07) 36px);
+    repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(186, 215, 245, 0.35) 35px, rgba(186, 215, 245, 0.35) 36px) !important;
   background-attachment: local;
-  color: #ede5da;
+  color: #2c2724 !important;
 }
 
 /* Notebook Depth Shadow & Spine Effect */

@@ -7,6 +7,7 @@ import {
   Quote,
   Eye,
   Image as ImageIcon,
+  Film,
   Link as LinkIcon,
   AlignCenter,
   AlignRight,
@@ -41,6 +42,7 @@ export function BBCodeToolbar({ textareaRef, value, onChange }) {
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [showUrlDialog, setShowUrlDialog] = useState(false);
   const [showImgDialog, setShowImgDialog] = useState(false);
+  const [showGifDialog, setShowGifDialog] = useState(false);
   const [showSpoilerDialog, setShowSpoilerDialog] = useState(false);
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
 
@@ -48,6 +50,7 @@ export function BBCodeToolbar({ textareaRef, value, onChange }) {
   const [urlInput, setUrlInput] = useState('');
   const [urlTextInput, setUrlTextInput] = useState('');
   const [imgInput, setImgInput] = useState('');
+  const [gifInput, setGifInput] = useState('');
   const [spoilerTitleInput, setSpoilerTitleInput] = useState('');
   const [quoteAuthorInput, setQuoteAuthorInput] = useState('');
 
@@ -149,6 +152,24 @@ export function BBCodeToolbar({ textareaRef, value, onChange }) {
     const safeImg = imgInput.trim();
     wrapText(`[img]`, `[/img]`, safeImg);
     setShowImgDialog(false);
+  };
+
+  // GIF Insertion
+  const handleOpenGifDialog = () => {
+    setGifInput('');
+    setShowGifDialog(true);
+  };
+
+  const handleApplyGif = (e, customUrl = null) => {
+    if (e) e.preventDefault();
+    const finalUrl = (customUrl || gifInput).trim();
+    if (!finalUrl) {
+      wrapText('[gif]', '[/gif]', 'https://media.giphy.com/media/unQ3IJU2RG7DO/giphy.gif');
+      setShowGifDialog(false);
+      return;
+    }
+    wrapText('[gif]', '[/gif]', finalUrl);
+    setShowGifDialog(false);
   };
 
   // Spoiler Insertion
@@ -388,6 +409,17 @@ export function BBCodeToolbar({ textareaRef, value, onChange }) {
         <ImageIcon className="w-3.5 h-3.5" />
       </button>
 
+      {/* Animated GIF */}
+      <button
+        type="button"
+        onClick={handleOpenGifDialog}
+        title="Animated GIF [gif]"
+        className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-amber-200/60 dark:hover:bg-gray-700 text-xs font-bold text-amber-900 dark:text-amber-200 transition-colors cursor-pointer border border-amber-300/70 dark:border-amber-700/80"
+      >
+        <Film className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+        <span>GIF</span>
+      </button>
+
       {/* Code */}
       <button
         type="button"
@@ -486,6 +518,78 @@ export function BBCodeToolbar({ textareaRef, value, onChange }) {
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 dark:bg-amber-500 text-white hover:bg-amber-700 dark:hover:bg-amber-600 cursor-pointer"
               >
                 Insert Image
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal / Dialog: Insert Animated GIF */}
+      {showGifDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs">
+          <form
+            onSubmit={handleApplyGif}
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-xl max-w-sm w-full space-y-3"
+          >
+            <div className="flex items-center gap-2">
+              <Film className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Insert Animated GIF</h4>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                GIF URL (Direct .gif, Giphy, Tenor, etc.)
+              </label>
+              <input
+                type="url"
+                placeholder="https://media.giphy.com/.../giphy.gif"
+                value={gifInput}
+                onChange={(e) => setGifInput(e.target.value)}
+                autoFocus
+                className="w-full px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            {/* Quick Presets for instant fun */}
+            <div className="pt-1">
+              <span className="block text-[11px] font-medium text-gray-500 mb-1.5">Or try a sample reaction GIF:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={(e) => handleApplyGif(e, 'https://media.giphy.com/media/unQ3IJU2RG7DO/giphy.gif')}
+                  className="px-2 py-1 text-[11px] font-medium rounded-md bg-amber-50 dark:bg-gray-800 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-gray-700 hover:bg-amber-100 cursor-pointer"
+                >
+                  🐱 Vibing Cat
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleApplyGif(e, 'https://media.giphy.com/media/MDJ9IbxxvDUQM/giphy.gif')}
+                  className="px-2 py-1 text-[11px] font-medium rounded-md bg-amber-50 dark:bg-gray-800 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-gray-700 hover:bg-amber-100 cursor-pointer"
+                >
+                  ☕ Coffee Cat
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleApplyGif(e, 'https://media.giphy.com/media/5GoVLqeAOo6PK/giphy.gif')}
+                  className="px-2 py-1 text-[11px] font-medium rounded-md bg-amber-50 dark:bg-gray-800 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-gray-700 hover:bg-amber-100 cursor-pointer"
+                >
+                  🎉 Excitement
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setShowGifDialog(false)}
+                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 dark:bg-amber-500 text-white hover:bg-amber-700 dark:hover:bg-amber-600 cursor-pointer"
+              >
+                Insert GIF
               </button>
             </div>
           </form>

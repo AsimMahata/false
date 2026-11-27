@@ -293,8 +293,8 @@ export function DiaryEntryForm({
                 ref={textareaRef}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="Dear Diary,&#10;&#10;Write your memories, thoughts, and reflections here in authentic handwriting...&#10;What you type is auto-saved to local storage immediately.&#10;Supports bold [b], colors [color=red], quotes [quote], spoilers [spoiler], images [img], and more."
-                className={`w-full min-h-[420px] p-6 pl-18 diary-paper focus:outline-hidden resize-none ${fontSizeClass} transition-colors`}
+                placeholder="Dear Diary,&#10;&#10;Write your memories, thoughts, and reflections here in authentic handwriting...&#10;What you type is auto-saved to local storage immediately.&#10;Supports bold [b], colors [color=red], quotes [quote], spoilers [spoiler], images [img], gifs [gif], and more."
+                className={`w-full min-h-[420px] p-6 pl-18 diary-paper text-[#2c2724] placeholder-amber-950/40 focus:outline-hidden resize-none ${fontSizeClass} transition-colors`}
                 style={{
                   lineHeight: '36px',
                 }}
@@ -304,26 +304,26 @@ export function DiaryEntryForm({
 
           {/* Live Preview Panel */}
           {(activeTab === 'preview' || activeTab === 'split') && (
-            <div className="min-h-[420px] p-6 pl-18 diary-paper relative overflow-y-auto">
-              <div className="mb-4 pb-2 border-b border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between">
+            <div className="min-h-[420px] p-6 pl-18 diary-paper text-[#2c2724] relative overflow-y-auto">
+              <div className="mb-4 pb-2 border-b border-amber-200/80 flex items-center justify-between">
                 <div>
                   {title ? (
-                    <h3 className="text-xl font-bold font-caveat text-amber-950 dark:text-amber-100">
+                    <h3 className="text-xl font-bold font-caveat text-amber-950">
                       {title}
                     </h3>
                   ) : (
-                    <span className="text-xs font-mono text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                    <span className="text-xs font-mono text-amber-900/60 uppercase tracking-widest">
                       Live Preview
                     </span>
                   )}
                 </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100/70 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300/50">
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100/70 text-amber-900 border border-amber-300/60">
                   {mood}
                 </span>
               </div>
 
               {/* BBCode Rendered Content */}
-              <div className={fontSizeClass}>
+              <div className={`${fontSizeClass} text-[#2c2724]`}>
                 <BBCodeRenderer text={body} />
               </div>
             </div>

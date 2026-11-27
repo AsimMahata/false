@@ -101,17 +101,17 @@ function SpoilerBlock({ title, children }) {
   const displayTitle = title ? title.trim().replace(/^["']|["']$/g, '') : null;
 
   return (
-    <div className="my-2 inline-block max-w-full text-left">
-      <div className="border border-amber-300/80 dark:border-amber-700/60 rounded-lg overflow-hidden bg-amber-50/50 dark:bg-amber-950/20 shadow-2xs">
+    <div className="my-2 inline-block max-w-full text-left font-sans">
+      <div className="border border-amber-300 rounded-xl overflow-hidden bg-amber-50/80 shadow-2xs">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/40 transition-colors cursor-pointer select-none"
+          className="w-full px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-amber-950 hover:bg-amber-100/80 transition-colors cursor-pointer select-none"
         >
           {isOpen ? (
-            <EyeOff className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
+            <EyeOff className="w-3.5 h-3.5 text-amber-800 shrink-0" />
           ) : (
-            <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
+            <Eye className="w-3.5 h-3.5 text-amber-800 shrink-0" />
           )}
           <span>
             {isOpen ? 'Hide spoiler' : 'Show spoiler'}
@@ -120,7 +120,7 @@ function SpoilerBlock({ title, children }) {
         </button>
 
         {isOpen && (
-          <div className="p-3 border-t border-amber-200 dark:border-amber-800/60 bg-white/70 dark:bg-gray-900/70 transition-all">
+          <div className="p-3 border-t border-amber-200 bg-white/80 text-amber-950 transition-all">
             {children}
           </div>
         )}
@@ -130,30 +130,67 @@ function SpoilerBlock({ title, children }) {
 }
 
 /**
- * Component for safe image rendering with error fallback.
+ * Normalize and clean up image and GIF URLs (Giphy, Tenor, Imgur, direct links)
  */
-function ImageBlock({ src, alt = 'diary entry image' }) {
-  const [hasError, setHasError] = useState(false);
-  const safeSrc = sanitizeUrl(src);
+function normalizeMediaUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  let cleaned = url.trim().replace(/^["']|["']$/g, '');
 
-  if (hasError || safeSrc === '#blocked') {
+  // Convert Giphy webpage link (e.g. https://giphy.com/gifs/cat-cute-3oriO0OEd9QIDdllqo) to direct gif
+  const giphyMatch = cleaned.match(/giphy\.com\/gifs\/(?:.*-)?([a-zA-Z0-9]+)$/i);
+  if (giphyMatch && !cleaned.includes('media.giphy.com')) {
+    return `https://media.giphy.com/media/${giphyMatch[1]}/giphy.gif`;
+  }
+
+  return cleaned;
+}
+
+/**
+ * Component for safe image & GIF rendering with error fallback and zoom.
+ */
+function ImageBlock({ src, alt = 'diary media', tag = 'img' }) {
+  const [hasError, setHasError] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const processedUrl = normalizeMediaUrl(src);
+  const safeSrc = sanitizeUrl(processedUrl);
+
+  const isGif =
+    tag === 'gif' ||
+    /\.gif(\?|#|$)/i.test(safeSrc) ||
+    safeSrc.includes('giphy.com') ||
+    safeSrc.includes('tenor.com');
+
+  if (hasError || safeSrc === '#blocked' || !safeSrc) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 my-1.5 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
-        <ImageOff className="w-3.5 h-3.5 text-gray-400" />
-        <span>[Image not available]</span>
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 my-2 rounded-xl border border-amber-300/80 bg-amber-50/80 text-xs text-amber-900 shadow-2xs font-sans">
+        <ImageOff className="w-3.5 h-3.5 text-amber-700" />
+        <span>[{isGif ? 'GIF not available' : 'Image not available'}]</span>
       </span>
     );
   }
 
   return (
-    <img
-      src={safeSrc}
-      alt={alt}
-      loading="lazy"
-      onError={() => setHasError(true)}
-      className="max-w-full h-auto rounded-lg shadow-xs my-2 border border-gray-200 dark:border-gray-800 inline-block align-middle"
-      style={{ maxHeight: '480px' }}
-    />
+    <span className="inline-block my-2.5 max-w-full align-middle">
+      <span className="relative inline-block group rounded-2xl overflow-hidden border border-amber-300/90 shadow-md bg-amber-50/40">
+        <img
+          src={safeSrc}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          onError={() => setHasError(true)}
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`max-w-full h-auto block rounded-2xl cursor-pointer transition-transform duration-200 group-hover:scale-[1.01] ${
+            isExpanded ? 'max-h-none' : 'max-h-[480px]'
+          }`}
+        />
+        {isGif && (
+          <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider bg-black/80 text-amber-300 backdrop-blur-xs select-none shadow-xs pointer-events-none">
+            GIF
+          </span>
+        )}
+      </span>
+    </span>
   );
 }
 
@@ -200,11 +237,11 @@ function parseBBCodeToAST(text) {
     });
   }
 
-  // Pre-process [code] and [img] tags so their inner content is raw text
+  // Pre-process [code], [img], and [gif] tags so their inner content is raw text
   const processedTokens = [];
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i];
-    if (tok.type === 'open' && (tok.tag === 'code' || tok.tag === 'img')) {
+    if (tok.type === 'open' && (tok.tag === 'code' || tok.tag === 'img' || tok.tag === 'gif')) {
       const closingTag = tok.tag;
       let rawContent = '';
       let j = i + 1;
@@ -413,13 +450,13 @@ function renderAST(nodes, keyPrefix = 'node') {
         return (
           <div
             key={key}
-            className="my-3 rounded-lg border border-gray-300 dark:border-gray-700/80 bg-amber-50/40 dark:bg-gray-800/50 overflow-hidden shadow-2xs font-sans text-sm text-left"
+            className="my-3 rounded-xl border border-amber-300/90 bg-amber-100/40 overflow-hidden shadow-2xs font-sans text-sm text-left"
           >
-            <div className="px-3 py-1.5 bg-amber-100/50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700/60 text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-              <Quote className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <div className="px-3 py-1.5 bg-amber-200/50 border-b border-amber-300/60 text-xs font-semibold text-amber-950 flex items-center gap-1.5">
+              <Quote className="w-3.5 h-3.5 text-amber-700 shrink-0" />
               <span>{author ? `${author} wrote:` : 'Quote:'}</span>
             </div>
-            <div className="p-3 italic text-gray-800 dark:text-gray-200 font-sans text-sm leading-relaxed">
+            <div className="p-3 italic text-amber-950 font-sans text-sm leading-relaxed">
               {renderAST(node.children, key)}
             </div>
           </div>
@@ -434,7 +471,8 @@ function renderAST(nodes, keyPrefix = 'node') {
         );
 
       case 'img':
-        return <ImageBlock key={key} src={node.content} />;
+      case 'gif':
+        return <ImageBlock key={key} src={node.content} tag={node.type} />;
 
       case 'url': {
         // [url=link]text[/url] or [url]link[/url]
