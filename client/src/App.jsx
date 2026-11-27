@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
 import { MasterPasswordBar } from './components/MasterPasswordBar';
 import { DateNavigation } from './components/DateNavigation';
 import { StatementForm } from './components/StatementForm';
@@ -9,6 +10,13 @@ import { VersionHistoryModal } from './components/VersionHistoryModal';
 import { ActivityLogView } from './components/ActivityLogView';
 import { SummaryView } from './components/SummaryView';
 import { ConfirmModal } from './components/ConfirmModal';
+import { DiaryView } from './components/diary/DiaryView';
+import {
+  ListFilter,
+  BarChart2,
+  History,
+  BookOpen,
+} from 'lucide-react';
 import {
   fetchStatements,
   createStatement,
@@ -20,9 +28,59 @@ import { encryptStatement, decryptStatement } from './crypto/statementCrypto';
 
 const SESSION_STORAGE_KEY = 'stmt_tracker_session_v1';
 const THEME_STORAGE_KEY = 'stmt_tracker_theme';
+const LAST_PAGE_KEY = 'false_last_page';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState('statements');
+  // Top-level page: 'statement' | 'diary'
+  const [activePage, setActivePage] = useState(() => {
+    try {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes('dairy') || path.includes('diary')) {
+        return 'diary';
+      }
+      if (path.includes('statement')) {
+        return 'statement';
+      }
+      const saved = localStorage.getItem(LAST_PAGE_KEY);
+      if (saved === 'diary' || saved === 'statement') {
+        return saved;
+      }
+    } catch {}
+    return 'statement';
+  });
+
+  // Statement section sub-tab: 'list' | 'summary' | 'activity'
+  const [statementSubTab, setStatementSubTab] = useState('list');
+
+  // Sidebar responsive drawer state
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Sync active page with URL pathname and localStorage
+  const handleSelectPage = (page) => {
+    setActivePage(page);
+    try {
+      localStorage.setItem(LAST_PAGE_KEY, page);
+      const targetUrl = page === 'diary' ? '/dairy' : '/statement';
+      if (window.location.pathname !== targetUrl) {
+        window.history.pushState({ page }, '', targetUrl);
+      }
+    } catch {}
+  };
+
+  // Listen to browser forward/back buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes('dairy') || path.includes('diary')) {
+        setActivePage('diary');
+      } else {
+        setActivePage('statement');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Dark Mode State
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -74,7 +132,7 @@ export function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState(null);
 
-  // Modal for version history
+  // Modal for statement version history
   const [historyStatementId, setHistoryStatementId] = useState(null);
 
   // Custom confirmation modal state
@@ -284,109 +342,193 @@ export function App() {
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'} flex flex-col font-sans transition-colors`}>
-      <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'} flex font-sans transition-colors`}>
+      {/* Sleek Collapsible / Mobile Responsive Sidebar */}
+      <Sidebar
+        activePage={activePage}
+        onSelectPage={handleSelectPage}
+        activeStatementSubTab={statementSubTab}
+        onSelectStatementSubTab={setStatementSubTab}
         isUnlocked={isUnlocked}
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
       />
 
-      <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 space-y-6">
-        {/* Master Password Bar */}
-        <MasterPasswordBar
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header
+          activePage={activePage}
+          onSelectPage={handleSelectPage}
+          activeTab={statementSubTab}
+          setActiveTab={setStatementSubTab}
           isUnlocked={isUnlocked}
-          onUnlock={handleUnlock}
-          onLock={handleLock}
-          error={cryptoError}
+          isDarkMode={isDarkMode}
+          onToggleTheme={toggleTheme}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
 
-        {apiError && (
-          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-400 font-medium">
-            API Error: {apiError}
-          </div>
-        )}
+        <main className="max-w-5xl w-full mx-auto px-4 py-6 flex-1 space-y-6">
+          {/* Master Password Bar (Always available for both Statements & Diary) */}
+          <MasterPasswordBar
+            isUnlocked={isUnlocked}
+            onUnlock={handleUnlock}
+            onLock={handleLock}
+            error={cryptoError}
+          />
 
-        {/* Statements Tab */}
-        {activeTab === 'statements' && (
-          <div className="space-y-6">
-            {/* Date Navigation */}
-            <DateNavigation
+          {apiError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-400 font-medium">
+              API Error: {apiError}
+            </div>
+          )}
+
+          {/* PAGE 1: STATEMENTS (with its sub-views grouped together) */}
+          {activePage === 'statement' && (
+            <div className="space-y-6">
+              {/* Inner Sub-Navigation for Statements: List, Summary, Activity Log */}
+              <div className="flex items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-800 pb-3">
+                <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl">
+                  <button
+                    onClick={() => setStatementSubTab('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      statementSubTab === 'list'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <ListFilter className="w-3.5 h-3.5" />
+                    <span>Daily Statements</span>
+                  </button>
+
+                  <button
+                    onClick={() => setStatementSubTab('summary')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      statementSubTab === 'summary'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    <span>Summary & Analytics</span>
+                  </button>
+
+                  <button
+                    onClick={() => setStatementSubTab('activity')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      statementSubTab === 'activity'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    <span>Activity Log</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-view: Statements List & Form */}
+              {statementSubTab === 'list' && (
+                <div className="space-y-6">
+                  {/* Date Navigation */}
+                  <DateNavigation
+                    selectedDate={selectedDate}
+                    setSelectedDate={setSelectedDate}
+                  />
+
+                  {/* Add Statement Form */}
+                  <StatementForm
+                    onAddStatement={handleAddStatement}
+                    isUnlocked={isUnlocked}
+                    isSubmitting={isSubmitting}
+                  />
+
+                  {/* List of Statements */}
+                  {isLoading ? (
+                    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                      Loading statements for {selectedDate}...
+                    </div>
+                  ) : (
+                    <StatementList
+                      statements={statements}
+                      decryptedMap={decryptedMap}
+                      isUnlocked={isUnlocked}
+                      onToggleStatus={handleToggleStatus}
+                      onEditContent={handleEditContent}
+                      onDelete={handleDelete}
+                      onViewHistory={(id) => setHistoryStatementId(id)}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Sub-view: Summary */}
+              {statementSubTab === 'summary' && (
+                <SummaryView
+                  onSelectDate={(dateStr) => {
+                    setSelectedDate(dateStr);
+                    setStatementSubTab('list');
+                  }}
+                />
+              )}
+
+              {/* Sub-view: Activity Log */}
+              {statementSubTab === 'activity' && <ActivityLogView />}
+            </div>
+          )}
+
+          {/* PAGE 2: DIARY ("DAIRY") */}
+          {activePage === 'diary' && (
+            <DiaryView
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
-            />
-
-            {/* Add Statement Form */}
-            <StatementForm
-              onAddStatement={handleAddStatement}
+              masterPassword={masterPassword}
               isUnlocked={isUnlocked}
-              isSubmitting={isSubmitting}
+              onPromptUnlock={() => {
+                // Focus the password input
+                const input = document.getElementById('master-password-input');
+                if (input) input.focus();
+              }}
+              onDeleteConfirm={(config) => setConfirmModalConfig(config)}
             />
+          )}
+        </main>
 
-            {/* List of Statements */}
-            {isLoading ? (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center text-xs text-gray-500 dark:text-gray-400">
-                Loading statements for {selectedDate}...
-              </div>
-            ) : (
-              <StatementList
-                statements={statements}
-                decryptedMap={decryptedMap}
-                isUnlocked={isUnlocked}
-                onToggleStatus={handleToggleStatus}
-                onEditContent={handleEditContent}
-                onDelete={handleDelete}
-                onViewHistory={(id) => setHistoryStatementId(id)}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Summary Tab */}
-        {activeTab === 'summary' && (
-          <SummaryView
-            onSelectDate={(dateStr) => {
-              setSelectedDate(dateStr);
-              setActiveTab('statements');
-            }}
+        {/* Version History Modal */}
+        {historyStatementId && (
+          <VersionHistoryModal
+            statementId={historyStatementId}
+            masterPassword={masterPassword}
+            onClose={() => setHistoryStatementId(null)}
           />
         )}
 
-        {/* Activity Log Tab */}
-        {activeTab === 'activity' && <ActivityLogView />}
-      </main>
+        {/* Custom Confirmation Modal */}
+        {confirmModalConfig && (
+          <ConfirmModal
+            isOpen={Boolean(confirmModalConfig)}
+            title={confirmModalConfig.title}
+            message={confirmModalConfig.message}
+            confirmText={confirmModalConfig.confirmText}
+            confirmVariant={confirmModalConfig.confirmVariant}
+            onConfirm={confirmModalConfig.onConfirm}
+            onCancel={() => setConfirmModalConfig(null)}
+          />
+        )}
 
-      {/* Version History Modal */}
-      {historyStatementId && (
-        <VersionHistoryModal
-          statementId={historyStatementId}
-          masterPassword={masterPassword}
-          onClose={() => setHistoryStatementId(null)}
-        />
-      )}
+        {/* Footer */}
+        <footer className="border-t border-gray-200 dark:border-gray-800 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
+          <span className="font-bold text-gray-700 dark:text-gray-300">false</span> — a statement tracker & diary • AES-256-GCM Client-Side Encrypted
+        </footer>
 
-      {/* Custom Confirmation Modal */}
-      {confirmModalConfig && (
-        <ConfirmModal
-          isOpen={Boolean(confirmModalConfig)}
-          title={confirmModalConfig.title}
-          message={confirmModalConfig.message}
-          confirmText={confirmModalConfig.confirmText}
-          confirmVariant={confirmModalConfig.confirmVariant}
-          onConfirm={confirmModalConfig.onConfirm}
-          onCancel={() => setConfirmModalConfig(null)}
-        />
-      )}
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
-        <span className="font-bold text-gray-700 dark:text-gray-300">false</span> — a statement tracker • AES-256-GCM Client-Side Encrypted
-      </footer>
-
-      {/* Vercel Web Analytics */}
-      <Analytics />
+        {/* Vercel Web Analytics */}
+        <Analytics />
+      </div>
     </div>
   );
 }
+
 export default App;

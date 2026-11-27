@@ -225,3 +225,42 @@ export async function decryptStatement(envelope, masterPassword) {
     throw new Error('Decryption failed: Incorrect master password or corrupted/tampered data.');
   }
 }
+
+/**
+ * Encrypt diary entry (accepts either string plaintext or structured object, e.g. { title, mood, body })
+ * with master password into an encrypted JSON envelope.
+ *
+ * @param {string|Object} entryData - The diary entry string or structured object
+ * @param {string} masterPassword - The user's master password
+ * @returns {Promise<Object>} The encrypted envelope
+ */
+export async function encryptDiaryEntry(entryData, masterPassword) {
+  if (entryData === null || entryData === undefined) {
+    throw new Error('Diary entry data is required.');
+  }
+  const plaintext = typeof entryData === 'string' ? entryData : JSON.stringify(entryData);
+  return encryptStatement(plaintext, masterPassword);
+}
+
+/**
+ * Decrypt an encrypted envelope back to plaintext or parsed object if valid JSON
+ *
+ * @param {Object} envelope - The encrypted envelope object
+ * @param {string} masterPassword - The user's master password
+ * @param {boolean} [autoParse=true] - Whether to automatically parse JSON if string looks like JSON
+ * @returns {Promise<string|Object>} The decrypted plaintext or parsed object
+ */
+export async function decryptDiaryEntry(envelope, masterPassword, autoParse = true) {
+  const decrypted = await decryptStatement(envelope, masterPassword);
+  if (autoParse && typeof decrypted === 'string') {
+    const trimmed = decrypted.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return decrypted;
+      }
+    }
+  }
+  return decrypted;
+}

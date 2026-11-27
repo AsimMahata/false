@@ -10,13 +10,18 @@ const ActivityLogSchema = new mongoose.Schema(
     },
     statement_id: {
       type: String,
-      required: true,
+      required: false,
+      index: true,
+    },
+    entry_id: {
+      type: String,
+      required: false,
       index: true,
     },
     action: {
       type: String,
       required: true,
-      enum: ['ADD', 'DELETE', 'EDIT', 'CHANGE_STATUS'],
+      enum: ['ADD', 'DELETE', 'EDIT', 'CHANGE_STATUS', 'ADD_DIARY', 'EDIT_DIARY', 'DELETE_DIARY'],
     },
     metadata: {
       type: mongoose.Schema.Types.Mixed,

@@ -42,7 +42,7 @@ export function MasterPasswordBar({ isUnlocked, onUnlock, onLock, error }) {
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {isUnlocked
                   ? 'Client-Side Encryption Active'
-                  : 'Master Password Required to Decrypt Statements'}
+                  : 'Master Password Required to Decrypt Journal & Statements'}
               </h3>
               {isUnlocked && (
                 <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-medium">
@@ -65,13 +65,14 @@ export function MasterPasswordBar({ isUnlocked, onUnlock, onLock, error }) {
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white shadow-xs transition-colors cursor-pointer"
           >
             <Lock className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-            Lock Statements
+            Lock App
           </button>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-2 w-full sm:w-auto">
             <div className="flex items-center gap-2">
               <div className="relative flex-1 sm:w-64">
                 <input
+                  id="master-password-input"
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
