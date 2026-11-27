@@ -8,9 +8,10 @@
     "build": "cd client && npm run build",
     "dev": "node server/src/server.js",
     "dev:client": "cd client && npm run dev",
-    "test": "node --test tests/crypto.test.js tests/api.test.js",
+    "test": "node --test tests/crypto.test.js tests/api.test.js tests/diary.test.js",
     "test:crypto": "node --test tests/crypto.test.js",
-    "test:api": "node --test tests/api.test.js"
+    "test:api": "node --test tests/api.test.js",
+    "test:diary": "node --test tests/diary.test.js"
   },
   "keywords": [],
   "author": "",

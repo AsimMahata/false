@@ -90,3 +90,101 @@ export async function fetchActivityLogs() {
   }
   return res.json();
 }
+
+// ==========================================
+// Diary API Endpoints
+// ==========================================
+
+export async function fetchDiaryEntry(date) {
+  const res = await fetch(`${API_BASE}/diary?date=${encodeURIComponent(date)}`);
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch diary entry (${res.status})`);
+  }
+  const data = await res.json();
+  if (Array.isArray(data)) {
+    return data[0] || null;
+  }
+  return data;
+}
+
+export async function fetchDiaryEntries(date) {
+  const res = await fetch(`${API_BASE}/diary?date=${encodeURIComponent(date)}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch diary entries (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchDiaryDates() {
+  const res = await fetch(`${API_BASE}/diary/dates`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch diary dates (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function createDiaryEntry(date, encryptedContent) {
+  const res = await fetch(`${API_BASE}/diary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date,
+      content: encryptedContent,
+    }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to create diary entry (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function updateDiaryEntry(id, encryptedContent) {
+  const res = await fetch(`${API_BASE}/diary/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content: encryptedContent,
+    }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to update diary entry (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function deleteDiaryEntry(id) {
+  const res = await fetch(`${API_BASE}/diary/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to delete diary entry (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchDiaryHistory(id) {
+  const res = await fetch(`${API_BASE}/diary/${encodeURIComponent(id)}/history`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch diary history (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchDiarySummary() {
+  const res = await fetch(`${API_BASE}/diary/summary`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch diary summary (${res.status})`);
+  }
+  return res.json();
+}
